@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "*.toml": "plaintext",
+        "ble_db_discovery.h": "c",
+        "nrf_ble_qwr.h": "c",
+        "app_button.h": "c",
+        "nrf_gpio.h": "c",
+        "bsp_btn_ble.h": "c",
+        "bsp.h": "c"
+    }
+}
