@@ -125,6 +125,17 @@ static int SCAN_LEDs[NUM_SCAN_LEDS] = {BSP_BOARD_LED_2, BSP_BOARD_LED_3};
 static int ADV_LED  = BSP_BOARD_LED_0;
 static int SCAN_LED =  BSP_BOARD_LED_2;
 
+// Define BSP LEDs and Buttons 
+#define FIRST_PERI_CONNECTED            BSP_BOARD_LED_0
+#define SECOND_PERI_CONNECTED           BSP_BOARD_LED_1
+#define FIRST_CENT_CONNECTED            BSP_BOARD_LED_2
+#define SECOND_CENT_CONNECTED           BSP_BOARD_LED_3
+#define SEND_PERI_FIRST                 BSP_BUTTON_0
+#define SEND_PERI_SECOND                BSP_BUTTON_1
+#define SEND_CENT_FIRST                 BSP_BUTTON_2
+#define SEND_CENT_SECOND                BSP_BUTTON_3
+
+
 static void scan_timer_handler(void *p_context)
 {
     UNUSED_PARAMETER(p_context);
