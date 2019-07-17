@@ -72,7 +72,7 @@
 #include "nrf_log_default_backends.h"
 
 
-#define DEVICE_NAME                     "Nordic_Blinky_Peripheral"
+#define DEVICE_NAME                     "Nordic_Blinky_P"
 #define LINK_TOTAL                      NRF_SDH_BLE_PERIPHERAL_LINK_COUNT + \
                                         NRF_SDH_BLE_CENTRAL_LINK_COUNT
 
@@ -89,7 +89,7 @@
 #define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000)                   /**< Time between each call to sd_ble_gap_conn_param_update after the first call (5 seconds). */
 #define MAX_CONN_PARAMS_UPDATE_COUNT    3
 
-#define ADVERTISING_LED                 BSP_BOARD_LED_3                         /**< Is on when device is advertising. */
+// #define ADVERTISING_LED                 BSP_BOARD_LED_3                         /**< Is on when device is advertising. */
 // #define CONNECTED_LED                   BSP_BOARD_LED_1                         /**< Is on when device has connected. */
 // #define LEDBUTTON_LED                   BSP_BOARD_LED_2                         /**< LED to be toggled with the help of the LED Button Service. */
 // #define LEDBUTTON_BUTTON                BSP_BUTTON_0
@@ -97,9 +97,9 @@
 #define APP_BLE_CONN_CFG_TAG      1                                     /**< Tag that refers to the BLE stack configuration that is set with @ref sd_ble_cfg_set. The default tag is @ref APP_BLE_CONN_CFG_TAG. */
 #define APP_BLE_OBSERVER_PRIO     3                                     /**< BLE observer priority of the application. There is no need to modify this value. */
 
-#define CENTRAL_SCANNING_LED      BSP_BOARD_LED_0
-#define CENTRAL_CONNECTED_LED     BSP_BOARD_LED_1
-#define LEDBUTTON_LED             BSP_BOARD_LED_2                       /**< LED to indicate a change of state of the Button characteristic on the peer. */
+// #define CENTRAL_SCANNING_LED      BSP_BOARD_LED_0
+// #define CENTRAL_CONNECTED_LED     BSP_BOARD_LED_1
+#define LEDBUTTON_LED             BSP_BOARD_LED_0                       /**< LED to indicate a change of state of the Button characteristic on the peer. */
 
 #define LEDBUTTON_BUTTON          BSP_BUTTON_0                          /**< Button that writes to the LED characteristic of the peer. */
 #define BUTTON_DETECTION_DELAY    APP_TIMER_TICKS(50)                   /**< Delay from a GPIOTE event until a button is reported as pushed (in number of timer ticks). */
@@ -118,8 +118,12 @@ static uint8_t m_enc_scan_response_data[BLE_GAP_ADV_SET_DATA_SIZE_MAX];         
 APP_TIMER_DEF(m_scan_timer);
 APP_TIMER_DEF(m_adv_timer);
 
+#define NUM_ADV_LEDS 2
+#define NUM_SCAN_LEDS 2
+static int ADV_LEDs[NUM_ADV_LEDS]  = {BSP_BOARD_LED_0, BSP_BOARD_LED_1};
+static int SCAN_LEDs[NUM_SCAN_LEDS] = {BSP_BOARD_LED_2, BSP_BOARD_LED_3};
 static int ADV_LED  = BSP_BOARD_LED_0;
-static int SCAN_LED = BSP_BOARD_LED_2;
+static int SCAN_LED =  BSP_BOARD_LED_2;
 
 static void scan_timer_handler(void *p_context)
 {
@@ -264,6 +268,23 @@ static void scan_start(void)
 }
 
 
+/**@brief Function for starting advertising.
+ */
+static void advertising_start(void)
+{
+    ret_code_t err_code;
+
+    err_code = sd_ble_gap_adv_start(m_adv_handle, APP_BLE_CONN_CFG_TAG);
+    APP_ERROR_CHECK(err_code);
+
+    // bsp_board_led_on(ADVERTISING_LED);
+    // bsp_indication_set(BSP_INDICATE_ADVERTISING);
+
+    err_code = app_timer_start(m_adv_timer, APP_TIMER_TICKS(1000), NULL);
+    APP_ERROR_CHECK(err_code);
+}
+
+
 /**@brief Handles events coming from the LED Button central module.
  *
  * @param[in] p_lbs_c     The instance of LBS_C that triggered the event.
@@ -311,17 +332,39 @@ static void lbs_c_evt_handler(ble_lbs_c_t * p_lbs_c, ble_lbs_c_evt_t * p_lbs_c_e
 }
 
 
-/**@brief Function for handling BLE events.
+/**@brief Function for assigning new connection handle to available instance of QWR module.
+ *
+ * @param[in] conn_handle New connection handle.
+ */
+static void multi_qwr_conn_handle_assign(uint16_t conn_handle)
+{
+    for (uint32_t i = 0; i < NRF_SDH_BLE_TOTAL_LINK_COUNT; i++)
+    {
+        if (m_qwr[i].conn_handle == BLE_CONN_HANDLE_INVALID)
+        {
+            ret_code_t err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr[i], conn_handle);
+            APP_ERROR_CHECK(err_code);
+            break;
+        }
+    }
+}
+
+
+/**@brief   Function for handling BLE events from the central application.
+ *
+ * @details This function parses scanning reports and initiates a connection to peripherals when a
+ *          target UUID is found. It updates the status of LEDs used to report the central application
+ *          activity.
  *
  * @param[in]   p_ble_evt   Bluetooth stack event.
- * @param[in]   p_context   Unused.
  */
-static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
-{
+static void on_ble_central_evt(ble_evt_t const * p_ble_evt)
+{   
     ret_code_t err_code;
 
-    // For readability.
     ble_gap_evt_t const * p_gap_evt = &p_ble_evt->evt.gap_evt;
+
+    uint16_t conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
 
     switch (p_ble_evt->header.evt_id)
     {
@@ -329,9 +372,10 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         // discovery, update LEDs status, and resume scanning, if necessary.
         case BLE_GAP_EVT_CONNECTED:
         {
-            NRF_LOG_INFO("Connection 0x%x established, starting DB discovery.",
-                         p_gap_evt->conn_handle);
+            int cnt = ble_conn_state_central_conn_count();
 
+            NRF_LOG_INFO("Central #%d Connected 0x%x, starting DB discovery.", cnt, conn_handle);
+            
             APP_ERROR_CHECK_BOOL(p_gap_evt->conn_handle < NRF_SDH_BLE_CENTRAL_LINK_COUNT);
 
             err_code = ble_lbs_c_handles_assign(&m_lbs_c[p_gap_evt->conn_handle],
@@ -346,43 +390,54 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
                 APP_ERROR_CHECK(err_code);
             }
 
-            // Update LEDs status and check whether it is needed to look for more
-            // peripherals to connect to.
-            bsp_board_led_on(CENTRAL_CONNECTED_LED);
-//            if (ble_conn_state_central_conn_count() == NRF_SDH_BLE_CENTRAL_LINK_COUNT)
-//            {
-//                bsp_board_led_off(CENTRAL_SCANNING_LED);
-//            }
-//            else
-//            {
-//                // Resume scanning.
-//                bsp_board_led_on(CENTRAL_SCANNING_LED);
-//                scan_start();
-//            }
+            // Assign connection handle to the QWR module.
+            multi_qwr_conn_handle_assign(p_gap_evt->conn_handle);
+
+            // Turn on connection indicator LEDs
+            for (uint32_t i = 0; i < cnt; i++) {
+                bsp_board_led_on(SCAN_LEDs[i]);
+            }
+
+            if (cnt == NRF_SDH_BLE_CENTRAL_LINK_COUNT) {
+                app_timer_stop(m_scan_timer);
+            }
+            else {
+                // Switch scanning led
+                SCAN_LED = SCAN_LEDs[cnt];
+
+                scan_start();
+            }
+
         } break; // BLE_GAP_EVT_CONNECTED
 
         // Upon disconnection, reset the connection handle of the peer that disconnected, update
         // the LEDs status and start scanning again.
         case BLE_GAP_EVT_DISCONNECTED:
         {
-            NRF_LOG_INFO("LBS central link 0x%x disconnected (reason: 0x%x)",
-                         p_gap_evt->conn_handle,
-                         p_gap_evt->params.disconnected.reason);
+            int cnt = ble_conn_state_central_conn_count();
 
-            if (ble_conn_state_central_conn_count() == 0)
-            {
-                err_code = app_button_disable();
-                APP_ERROR_CHECK(err_code);
+            NRF_LOG_INFO("LBS CENTRAL link 0x%x disconnected (reason: 0x%x)",
+                        p_gap_evt->conn_handle,
+                        p_gap_evt->params.disconnected.reason);
 
-                // Turn off the LED that indicates the connection.
-                bsp_board_led_off(CENTRAL_CONNECTED_LED);
+            for (uint32_t i = 0; i < NUM_SCAN_LEDS; i++) {
+                bsp_board_led_off(SCAN_LEDs[i]);
+            }
+            for (uint32_t i = 0; i < cnt; i++) {
+                bsp_board_led_on(SCAN_LEDs[i]);
             }
 
-            // Start scanning.
-            scan_start();
+            // if (cnt == 0) {
+            //     err_code = app_button_disable();
+            //     APP_ERROR_CHECK(err_code);
+            // }
 
-            // Turn on the LED for indicating scanning.
-            bsp_board_led_on(CENTRAL_SCANNING_LED);
+            // Switch scanning led
+            SCAN_LED = SCAN_LEDs[cnt];
+            if (cnt == (NRF_SDH_BLE_CENTRAL_LINK_COUNT - 1)) {
+                // Scanning is not running when all connections are taken, and must therefore be started.                
+                scan_start();
+            }            
 
         } break;
 
@@ -437,6 +492,166 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         default:
             // No implementation needed.
             break;
+    }
+}
+
+
+/**@brief   Function for handling BLE events from peripheral applications.
+ * @details Updates the status LEDs used to report the activity of the peripheral applications.
+ *
+ * @param[in]   p_ble_evt   Bluetooth stack event.
+ */
+static void on_ble_peripheral_evt(ble_evt_t const * p_ble_evt)
+{
+    ret_code_t err_code;
+
+    ble_gap_evt_t const * p_gap_evt = &p_ble_evt->evt.gap_evt;
+
+    uint16_t conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+    
+    switch (p_ble_evt->header.evt_id)
+    {
+        // Upon connection, check which peripheral is connected, initiate DB
+        // discovery, update LEDs status, and resume scanning, if necessary.
+        case BLE_GAP_EVT_CONNECTED:
+        {
+            int cnt = ble_conn_state_peripheral_conn_count();
+
+            NRF_LOG_INFO("Peripheral #%d Connected 0x%x.", cnt, conn_handle);
+
+            // Assign connection handle to available instance of QWR module.
+            multi_qwr_conn_handle_assign(p_gap_evt->conn_handle);
+
+            err_code = app_button_enable();
+            APP_ERROR_CHECK(err_code);
+
+            // Turn on connection indicator LEDs
+            for (uint32_t i = 0; i < cnt; i++) {
+                bsp_board_led_on(ADV_LEDs[i]);
+            }
+
+            if (cnt == NRF_SDH_BLE_PERIPHERAL_LINK_COUNT) {
+                app_timer_stop(m_adv_timer);
+            }
+            else {
+                // Switch advertising led
+                ADV_LED = ADV_LEDs[cnt];
+
+                advertising_start();
+            }
+
+
+        } break; // BLE_GAP_EVT_CONNECTED
+
+        // Upon disconnection, reset the connection handle of the peer that disconnected, update
+        // the LEDs status and start scanning again.
+        case BLE_GAP_EVT_DISCONNECTED:
+        {
+            int cnt = ble_conn_state_peripheral_conn_count();
+
+            NRF_LOG_INFO("LBS PERIPHERAL link 0x%x disconnected (reason: 0x%x)",
+                        p_gap_evt->conn_handle,
+                        p_gap_evt->params.disconnected.reason);
+
+            for (uint32_t i = 0; i < NUM_ADV_LEDS; i++) {
+                bsp_board_led_off(ADV_LEDs[i]);
+            }
+            for (uint32_t i = 0; i < cnt; i ++) {
+                bsp_board_led_on(ADV_LEDs[i]);
+            }
+
+            // if (cnt == 0) {
+            //     err_code = app_button_disable();
+            //     APP_ERROR_CHECK(err_code);
+            // }            
+
+            // Switch advertising led
+            ADV_LED = ADV_LEDs[cnt];
+            if (cnt == (NRF_SDH_BLE_PERIPHERAL_LINK_COUNT - 1)) {
+                // Advertising is not running when all connections are taken, and must therefore be started.                
+                advertising_start();
+            }
+
+        } break;
+
+        case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
+        {
+            // Pairing not supported
+            err_code = sd_ble_gap_sec_params_reply(p_ble_evt->evt.gap_evt.conn_handle,
+                                                   BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
+                                                   NULL,
+                                                   NULL);
+            APP_ERROR_CHECK(err_code);
+            break;
+        }
+
+        case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
+        {
+            NRF_LOG_DEBUG("PHY update request.");
+            ble_gap_phys_t const phys =
+            {
+                .rx_phys = BLE_GAP_PHY_AUTO,
+                .tx_phys = BLE_GAP_PHY_AUTO,
+            };
+            err_code = sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys);
+            APP_ERROR_CHECK(err_code);
+        } break;
+        
+        case BLE_GATTC_EVT_TIMEOUT:
+        {
+            // Disconnect on GATT client timeout event.
+            NRF_LOG_DEBUG("GATT client timeout.");
+            err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
+                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+            APP_ERROR_CHECK(err_code);
+        } break;
+
+        case BLE_GATTS_EVT_TIMEOUT:
+        {
+            // Disconnect on GATT server timeout event.
+            NRF_LOG_DEBUG("GATT server timeout.");
+            err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
+                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+            APP_ERROR_CHECK(err_code);
+        } break;
+
+        default:
+            // No implementation needed.
+            break;
+    }
+}
+
+
+/**@brief Function for checking whether a bluetooth stack event is an advertising timeout.
+ *
+ * @param[in] p_ble_evt Bluetooth stack event.
+ */
+static bool ble_evt_is_advertising_timeout(ble_evt_t const * p_ble_evt)
+{
+    return (p_ble_evt->header.evt_id == BLE_GAP_EVT_ADV_SET_TERMINATED);
+}
+
+
+/**@brief Function for handling BLE events.
+ *
+ * @param[in]   p_ble_evt   Bluetooth stack event.
+ * @param[in]   p_context   Unused.
+ */
+static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
+{
+    ret_code_t err_code;
+
+    // For readability.
+    ble_gap_evt_t const * p_gap_evt = &p_ble_evt->evt.gap_evt;
+
+    uint16_t conn_handle = p_gap_evt->conn_handle;
+    uint16_t gap_role    = ble_conn_state_role(conn_handle);
+    
+    if (gap_role == BLE_GAP_ROLE_PERIPH || ble_evt_is_advertising_timeout(p_ble_evt)) {
+        on_ble_peripheral_evt(p_ble_evt);
+    }
+    else if (gap_role = BLE_GAP_ROLE_CENTRAL) {
+        on_ble_central_evt(p_ble_evt);
     }
 }
 
@@ -738,23 +953,6 @@ static void services_init(void)
     APP_ERROR_CHECK(err_code);
 
     ble_conn_state_init();
-}
-
-
-/**@brief Function for starting advertising.
- */
-static void advertising_start(void)
-{
-    ret_code_t err_code;
-
-    err_code = sd_ble_gap_adv_start(m_adv_handle, APP_BLE_CONN_CFG_TAG);
-    APP_ERROR_CHECK(err_code);
-
-    // bsp_board_led_on(ADVERTISING_LED);
-    // bsp_indication_set(BSP_INDICATE_ADVERTISING);
-
-    err_code = app_timer_start(m_adv_timer, APP_TIMER_TICKS(1000), NULL);
-    APP_ERROR_CHECK(err_code);
 }
 
 
