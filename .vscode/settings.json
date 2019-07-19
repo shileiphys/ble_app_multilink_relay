@@ -6,6 +6,7 @@
         "app_button.h": "c",
         "nrf_gpio.h": "c",
         "bsp_btn_ble.h": "c",
-        "bsp.h": "c"
+        "bsp.h": "c",
+        "ble_lbs.h": "c"
     }
 }
