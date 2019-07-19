@@ -71,8 +71,9 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+static char const m_target_periph_name[] = "Nordic_Blinky";                     /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
 
-#define DEVICE_NAME                     "Nordic_Blinky_P"
+#define DEVICE_NAME                     "Nordic_Blinky_P"                       /**< Name of advertising */
 #define LINK_TOTAL                      NRF_SDH_BLE_PERIPHERAL_LINK_COUNT + \
                                         NRF_SDH_BLE_CENTRAL_LINK_COUNT
 
@@ -118,14 +119,24 @@ static uint8_t m_enc_scan_response_data[BLE_GAP_ADV_SET_DATA_SIZE_MAX];         
 APP_TIMER_DEF(m_scan_timer);
 APP_TIMER_DEF(m_adv_timer);
 
-#define NUM_ADV_LEDS 2
-#define NUM_SCAN_LEDS 2
-static int ADV_LEDs[NUM_ADV_LEDS]  = {BSP_BOARD_LED_0, BSP_BOARD_LED_1};
-static int SCAN_LEDs[NUM_SCAN_LEDS] = {BSP_BOARD_LED_2, BSP_BOARD_LED_3};
-static int ADV_LED  = BSP_BOARD_LED_0;
-static int SCAN_LED =  BSP_BOARD_LED_2;
 
-// Define BSP LEDs and Buttons 
+/**
+ * LED1 : turn on/off when first Peripheral device is connected or is disconnected
+ * LED2 : turn on/off when second Peripheral device is connected or is disconnected
+ * LED3 : turn on/off when first Central device is connected or is disconnected
+ * LED4 : turn on/off when second Central device is connected or is disconnected
+ * Button1 : to send an event to first Peripheral device
+ * Button2 : to send an event to second Peripheral device
+ * Button3 : to send an event to first Central device
+ * Button4 : to send an event to second Central device
+ * Blink LED1 : when push and then release the Button1 on first Peripheral device
+ * Blink LED2 : when push and then release the Button1 on second Peripheral device
+ * Turn off LED3 : when push On-Button on first Central device
+ * Turn on  LED3 : when push Off-Button on first Central device
+ * Turn off LED4 : when push On-Button on second Central device
+ * Turn on  LED4 : when push Off-Button on second Central device
+*/ 
+// Define BSP LEDs and Buttons
 #define FIRST_PERI_CONNECTED            BSP_BOARD_LED_0
 #define SECOND_PERI_CONNECTED           BSP_BOARD_LED_1
 #define FIRST_CENT_CONNECTED            BSP_BOARD_LED_2
@@ -135,19 +146,10 @@ static int SCAN_LED =  BSP_BOARD_LED_2;
 #define SEND_CENT_FIRST                 BSP_BUTTON_2
 #define SEND_CENT_SECOND                BSP_BUTTON_3
 
-
-static void scan_timer_handler(void *p_context)
-{
-    UNUSED_PARAMETER(p_context);
-    bsp_board_led_invert(SCAN_LED);
-}
-
-
-static void advertising_timer_handler(void *p_context)
-{
-    UNUSED_PARAMETER(p_context);
-    bsp_board_led_invert(ADV_LED);
-}
+static uint8_t peri_1_handle = 0xff;
+static uint8_t peri_2_handle = 0xff;
+static uint8_t cent_1_handle = 0xff;
+static uint8_t cent_2_handle = 0xff;
 
 
 /**@brief Struct that contains pointers to the encoded advertising data. */
@@ -166,9 +168,6 @@ static ble_gap_adv_data_t m_adv_data =
     }
 };
 
-static char const m_target_periph_name[] = "Nordic_Blinky";             /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
-
-
 /**@brief Function for handling asserts in the SoftDevice.
  *
  * @details This function is called in case of an assert in the SoftDevice.
@@ -186,6 +185,35 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 }
 
 
+static void scan_timer_handler(void *p_context)
+{
+    UNUSED_PARAMETER(p_context);
+
+    if (peri_1_handle == 0xff) {
+        bsp_board_led_invert(FIRST_PERI_CONNECTED);
+    }
+    if (peri_2_handle == 0xff) {
+        bsp_board_led_invert(SECOND_PERI_CONNECTED);
+    }
+    
+}
+
+
+static void advertising_timer_handler(void *p_context)
+{
+    UNUSED_PARAMETER(p_context);
+
+    if (cent_1_handle == 0xff) {
+        bsp_board_led_invert(FIRST_CENT_CONNECTED);
+    }
+
+    if (cent_2_handle == 0xff) {
+        bsp_board_led_invert(SECOND_CENT_CONNECTED);
+    }
+    
+}
+
+
 /**@brief Function for handling write events to the LED characteristic.
  *
  * @param[in] p_lbs     Instance of LED Button Service to which the write applies.
@@ -193,16 +221,29 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
  */
 static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t led_state)
 {
-    if (led_state)
-    {
-        bsp_board_led_on(LEDBUTTON_LED);
-        NRF_LOG_INFO("Received LED ON from link 0x%x!", conn_handle);
+    if (conn_handle == cent_1_handle) {
+        if (led_state) {
+            bsp_board_led_off(FIRST_CENT_CONNECTED);
+            NRF_LOG_INFO("Received LED ON from link 0x%x!", conn_handle);
+        }
+        else {
+            bsp_board_led_on(FIRST_CENT_CONNECTED);
+            NRF_LOG_INFO("Received LED OFF from link 0x%x!", conn_handle);
+        }
     }
-    else
-    {
-        bsp_board_led_off(LEDBUTTON_LED);
-        NRF_LOG_INFO("Received LED OFF from link 0x%x!", conn_handle);
+
+    if (conn_handle == cent_2_handle) {
+        if (led_state) {
+            bsp_board_led_off(SECOND_CENT_CONNECTED);
+            NRF_LOG_INFO("Received LED ON from link 0x%x!", conn_handle);
+        }
+        else {
+            bsp_board_led_on(SECOND_CENT_CONNECTED);
+            NRF_LOG_INFO("Received LED OFF from link 0x%x!", conn_handle);
+        }
+
     }
+
 }
 
 
@@ -291,7 +332,7 @@ static void advertising_start(void)
     // bsp_board_led_on(ADVERTISING_LED);
     // bsp_indication_set(BSP_INDICATE_ADVERTISING);
 
-    err_code = app_timer_start(m_adv_timer, APP_TIMER_TICKS(1000), NULL);
+    err_code = app_timer_start(m_adv_timer, APP_TIMER_TICKS(500), NULL);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -404,18 +445,27 @@ static void on_ble_central_evt(ble_evt_t const * p_ble_evt)
             // Assign connection handle to the QWR module.
             multi_qwr_conn_handle_assign(p_gap_evt->conn_handle);
 
-            // Turn on connection indicator LEDs
-            for (uint32_t i = 0; i < cnt; i++) {
-                bsp_board_led_on(SCAN_LEDs[i]);
-            }
-
             if (cnt == NRF_SDH_BLE_CENTRAL_LINK_COUNT) {
+                if ((peri_1_handle == 0xff) && (peri_2_handle != 0xff)) {
+                    peri_1_handle = p_gap_evt->conn_handle;
+                    bsp_board_led_on(FIRST_PERI_CONNECTED);
+                }
+
+                if ((peri_1_handle != 0xff) && (peri_2_handle == 0xff)) {
+                    peri_2_handle = p_gap_evt->conn_handle;
+                    bsp_board_led_on(SECOND_PERI_CONNECTED);
+                }
+            
+                // Stop scanning timer
                 app_timer_stop(m_scan_timer);
             }
-            else {
-                // Switch scanning led
-                SCAN_LED = SCAN_LEDs[cnt];
+            else if (cnt < NRF_SDH_BLE_CENTRAL_LINK_COUNT) {
+                if ((peri_1_handle == 0xff) && (peri_2_handle == 0xff)) {
+                    peri_1_handle = p_gap_evt->conn_handle;
+                    bsp_board_led_on(FIRST_PERI_CONNECTED);
+                }
 
+                // Resume scanning
                 scan_start();
             }
 
@@ -431,20 +481,19 @@ static void on_ble_central_evt(ble_evt_t const * p_ble_evt)
                         p_gap_evt->conn_handle,
                         p_gap_evt->params.disconnected.reason);
 
-            for (uint32_t i = 0; i < NUM_SCAN_LEDS; i++) {
-                bsp_board_led_off(SCAN_LEDs[i]);
+            if (p_gap_evt->conn_handle == peri_1_handle) {
+                bsp_board_led_off(FIRST_PERI_CONNECTED);
+                peri_1_handle = 0xff;
             }
-            for (uint32_t i = 0; i < cnt; i++) {
-                bsp_board_led_on(SCAN_LEDs[i]);
+            if (p_gap_evt->conn_handle == peri_2_handle) {
+                bsp_board_led_off(SECOND_PERI_CONNECTED);
+                peri_2_handle = 0xff;
             }
-
             // if (cnt == 0) {
             //     err_code = app_button_disable();
             //     APP_ERROR_CHECK(err_code);
             // }
 
-            // Switch scanning led
-            SCAN_LED = SCAN_LEDs[cnt];
             if (cnt == (NRF_SDH_BLE_CENTRAL_LINK_COUNT - 1)) {
                 // Scanning is not running when all connections are taken, and must therefore be started.                
                 scan_start();
@@ -536,18 +585,27 @@ static void on_ble_peripheral_evt(ble_evt_t const * p_ble_evt)
             err_code = app_button_enable();
             APP_ERROR_CHECK(err_code);
 
-            // Turn on connection indicator LEDs
-            for (uint32_t i = 0; i < cnt; i++) {
-                bsp_board_led_on(ADV_LEDs[i]);
-            }
-
             if (cnt == NRF_SDH_BLE_PERIPHERAL_LINK_COUNT) {
+                if ((cent_1_handle == 0xff) && (cent_2_handle != 0xff)) {
+                    cent_1_handle = p_gap_evt->conn_handle;
+                    bsp_board_led_on(FIRST_CENT_CONNECTED);
+                }
+
+                if ((cent_1_handle != 0xff) && (cent_2_handle == 0xff)) {
+                    cent_2_handle = p_gap_evt->conn_handle;
+                    bsp_board_led_on(SECOND_CENT_CONNECTED);
+                }
+
+                // turn off advertising timer     
                 app_timer_stop(m_adv_timer);
             }
-            else {
-                // Switch advertising led
-                ADV_LED = ADV_LEDs[cnt];
+            else if (cnt < NRF_SDH_BLE_PERIPHERAL_LINK_COUNT) {
+                if ((cent_1_handle == 0xff) && (cent_2_handle == 0xff)) {
+                    cent_1_handle = p_gap_evt->conn_handle;
+                    bsp_board_led_on(FIRST_CENT_CONNECTED);
+                }
 
+                // Resume advertising
                 advertising_start();
             }
 
@@ -564,20 +622,19 @@ static void on_ble_peripheral_evt(ble_evt_t const * p_ble_evt)
                         p_gap_evt->conn_handle,
                         p_gap_evt->params.disconnected.reason);
 
-            for (uint32_t i = 0; i < NUM_ADV_LEDS; i++) {
-                bsp_board_led_off(ADV_LEDs[i]);
+            if (p_gap_evt->conn_handle == cent_1_handle) {
+                bsp_board_led_off(FIRST_CENT_CONNECTED);
+                cent_1_handle = 0xff;
             }
-            for (uint32_t i = 0; i < cnt; i ++) {
-                bsp_board_led_on(ADV_LEDs[i]);
+            if (p_gap_evt->conn_handle == cent_2_handle) {
+                bsp_board_led_off(SECOND_PERI_CONNECTED);
+                cent_2_handle = 0xff;
             }
-
             // if (cnt == 0) {
             //     err_code = app_button_disable();
             //     APP_ERROR_CHECK(err_code);
             // }            
 
-            // Switch advertising led
-            ADV_LED = ADV_LEDs[cnt];
             if (cnt == (NRF_SDH_BLE_PERIPHERAL_LINK_COUNT - 1)) {
                 // Advertising is not running when all connections are taken, and must therefore be started.                
                 advertising_start();
@@ -593,8 +650,7 @@ static void on_ble_peripheral_evt(ble_evt_t const * p_ble_evt)
                                                    NULL,
                                                    NULL);
             APP_ERROR_CHECK(err_code);
-            break;
-        }
+        } break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
         {
@@ -760,13 +816,57 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 
     switch (pin_no)
     {
-        case LEDBUTTON_BUTTON:
-            err_code = led_status_send_to_all(button_action);
-            if (err_code == NRF_SUCCESS)
-            {
+        case SEND_PERI_FIRST:
+        {
+            err_code = ble_lbs_led_status_send(&m_lbs_c[peri_1_handle], button_action);
+            if (err_code != NRF_SUCCESS && 
+                err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+                err_code != NRF_ERROR_INVALID_STATE) {
                 NRF_LOG_INFO("LBS write LED state %d", button_action);
             }
-            break;
+        } break;
+        
+        case SEND_PERI_SECOND:
+        {
+            err_code = ble_lbs_led_status_send(&m_lbs_c[peri_2_handle], button_action);
+            if (err_code != NRF_SUCCESS && 
+                err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+                err_code != NRF_ERROR_INVALID_STATE) {
+                NRF_LOG_INFO("LBS write LED state %d", button_action);
+            }
+        } break;
+        
+        case SEND_CENT_FIRST:
+        {
+            err_code = ble_lbs_on_button_change(cent_1_handle, &m_lbs, button_action);
+            if (err_code != NRF_SUCCESS &&
+                err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+                err_code != NRF_ERROR_INVALID_STATE &&
+                err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+                NRF_LOG_INFO("LBS write LED state %d", button_action);
+                APP_ERROR_CHECK(err_code);
+            }
+        } break;
+
+        case SEND_CENT_SECOND:
+        {
+            err_code = ble_lbs_on_button_change(cent_2_handle, &m_lbs, button_action);
+            if (err_code != NRF_SUCCESS &&
+                err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+                err_code != NRF_ERROR_INVALID_STATE &&
+                err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+                NRF_LOG_INFO("LBS write LED state %d", button_action);
+                APP_ERROR_CHECK(err_code);
+            }            
+        } break;
+        
+        // case LEDBUTTON_BUTTON:
+        //     err_code = led_status_send_to_all(button_action);
+        //     if (err_code == NRF_SUCCESS)
+        //     {
+        //         NRF_LOG_INFO("LBS write LED state %d", button_action);
+        //     }
+        //     break;
 
         default:
             APP_ERROR_HANDLER(pin_no);
@@ -784,7 +884,11 @@ static void buttons_init(void)
    // The array must be static because a pointer to it is saved in the button handler module.
     static app_button_cfg_t buttons[] =
     {
-        {LEDBUTTON_BUTTON, false, BUTTON_PULL, button_event_handler}
+        // {LEDBUTTON_BUTTON, false, BUTTON_PULL, button_event_handler}
+        {SEND_PERI_FIRST, false, BUTTON_PULL, button_event_handler},
+        {SEND_PERI_SECOND, false, BUTTON_PULL, button_event_handler},
+        {SEND_CENT_FIRST, false, BUTTON_PULL, button_event_handler},
+        {SEND_CENT_SECOND, false, BUTTON_PULL, button_event_handler}
     };
 
     err_code = app_button_init(buttons, ARRAY_SIZE(buttons), BUTTON_DETECTION_DELAY);
