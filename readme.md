@@ -28,3 +28,47 @@ Connection 0x2 (3rd connection) > NRF_SDH_BLE_CENTRAL_LINK_COUNT
 <info> app: LBS PERIPHERAL link 0x2 disconnected (reason: 0x13)
 <info> app: LBS PERIPHERAL link 0x3 disconnected (reason: 0x8)
 <error> app: Fatal error
+
+<info> app: Multilink example started.
+<info> app: Start scanning for device name Nordic_Blinky.
+<info> app: Central #1 Connected 0x0, starting DB discovery.
+<info> app: Start scanning for device name Nordic_Blinky.
+<info> app: LED Button Service discovered on conn_handle 0x0
+<info> app: Peripheral #1 Connected 0x2.
+<info> app: LBS PERIPHERAL link 0x2 disconnected (reason: 0x13)
+
+<info> app: Multilink example started.
+<info> app: Start scanning for device name Nordic_Blinky.
+<info> app: Central #1 Connected 0x0, starting DB discovery.
+<info> app: Start scanning for device name Nordic_Blinky.
+<info> app: LED Button Service discovered on conn_handle 0x0
+<info> app: Peripheral #1 Connected 0x2.
+<info> app: Received LED ON from link 0x2!
+<info> app: Relay to Peripheral from link 0x0!
+<info> app: Received LED OFF from link 0x2!
+<info> app: Relay to Peripheral from link 0x0!
+<info> app: Received LED ON from link 0x2!
+<info> app: Relay to Peripheral from link 0x0!
+<info> app: Received LED OFF from link 0x2!
+<info> app: Relay to Peripheral from link 0x0!
+
+<info> app: Multilink example started.
+<info> app: Start scanning for device name Nordic_Blinky_P.
+<info> app: Central #1 Connected 0x0, starting DB discovery.
+<info> app: Start scanning for device name Nordic_Blinky_P.
+<info> app: Central #2 Connected 0x1, starting DB discovery.
+<info> app: LED Button Service discovered on conn_handle 0x1
+<info> app: LED Button Service discovered on conn_handle 0x0
+<info> app: Peripheral #1 Connected 0x2.
+<info> app: LBS PERIPHERAL link 0x2 disconnected (reason: 0x13)
+<info> app: Peripheral #1 Connected 0x3.
+<info> app: Received LED ON from link 0x3!
+<info> app: Relay to Peripheral from link 0x0!
+<info> app: Received LED OFF from link 0x3!
+<info> app: Relay to Peripheral from link 0x0!
+<info> app: Received LED ON from link 0x3!
+<info> app: Relay to Peripheral from link 0x0!
+<info> app: Received LED OFF from link 0x3!
+<info> app: Relay to Peripheral from link 0x0!
+<info> app: Received LED ON from link 0x3!
+<info> app: Relay to Peripheral from link 0x0!

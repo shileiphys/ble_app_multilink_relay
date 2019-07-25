@@ -71,9 +71,9 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-static char const m_target_periph_name[] = "Nordic_Blinky";                     /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
+static char const m_target_periph_name[] = "Nordic_Blinky_P";                     /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
 
-#define DEVICE_NAME                     "Nordic_Blinky_P"                       /**< Name of advertising */
+#define DEVICE_NAME                     "Nordic_Blinky_R"                       /**< Name of advertising */
 #define LINK_TOTAL                      NRF_SDH_BLE_PERIPHERAL_LINK_COUNT + \
                                         NRF_SDH_BLE_CENTRAL_LINK_COUNT
 
@@ -229,6 +229,13 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t l
         else {
             bsp_board_led_on(FIRST_CENT_CONNECTED);
             NRF_LOG_INFO("Received LED OFF from link 0x%x!", conn_handle);
+        }
+        NRF_LOG_INFO("Relay to Peripheral from link 0x%x!", peri_1_handle);
+        ret_code_t err_code = ble_lbs_led_status_send(&m_lbs_c[peri_1_handle], led_state);
+        if (err_code != NRF_SUCCESS && 
+            err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+            err_code != NRF_ERROR_INVALID_STATE) {
+            NRF_LOG_INFO("LBS write LED state %d", led_state);
         }
     }
 
