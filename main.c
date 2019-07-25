@@ -488,18 +488,46 @@ static void lbs_c_evt_handler(ble_lbs_c_t * p_lbs_c, ble_lbs_c_evt_t * p_lbs_c_e
 
         case BLE_LBS_C_EVT_BUTTON_NOTIFICATION:
         {
-            NRF_LOG_INFO("Link 0x%x, Button state changed on peer to 0x%x",
-                         p_lbs_c_evt->conn_handle,
-                         p_lbs_c_evt->params.button.button_state);
+            // NRF_LOG_INFO("Link 0x%x, Button state changed on peer to 0x%x",
+            //              p_lbs_c_evt->conn_handle,
+            //              p_lbs_c_evt->params.button.button_state);
 
-            if (p_lbs_c_evt->params.button.button_state)
-            {
-                bsp_board_led_on(LEDBUTTON_LED);
+            // if (p_lbs_c_evt->params.button.button_state)
+            // {
+            //     bsp_board_led_on(LEDBUTTON_LED);
+            // }
+            // else
+            // {
+            //     bsp_board_led_off(LEDBUTTON_LED);
+            // }
+
+            uint8_t button_action = p_lbs_c_evt->params.button.button_state;
+
+            NRF_LOG_INFO("lbs_c_evt handle 0x%x, cent_1_handle 0x%x, peri_1_handle 0x%x", 
+                    p_lbs_c_evt->conn_handle, cent_1_handle, peri_1_handle);
+
+            if (p_lbs_c_evt->conn_handle == peri_1_handle) {
+                ret_code_t err_code = ble_lbs_on_button_change(cent_1_handle, &m_lbs, button_action);
+                if (err_code != NRF_SUCCESS &&
+                    err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+                    err_code != NRF_ERROR_INVALID_STATE &&
+                    err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+                    NRF_LOG_INFO("LBS write LED state %d", button_action);
+                    APP_ERROR_CHECK(err_code);
+                }
             }
-            else
-            {
-                bsp_board_led_off(LEDBUTTON_LED);
+
+            if (p_lbs_c_evt->conn_handle == peri_2_handle) {
+                ret_code_t err_code = ble_lbs_on_button_change(cent_2_handle, &m_lbs, button_action);
+                if (err_code != NRF_SUCCESS &&
+                    err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+                    err_code != NRF_ERROR_INVALID_STATE &&
+                    err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+                    NRF_LOG_INFO("LBS write LED state %d", button_action);
+                    APP_ERROR_CHECK(err_code);
+                }
             }
+
         } break; // BLE_LBS_C_EVT_BUTTON_NOTIFICATION
 
         default:
