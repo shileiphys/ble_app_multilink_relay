@@ -152,6 +152,81 @@ static uint8_t cent_1_handle = 0xff;
 static uint8_t cent_2_handle = 0xff;
 
 
+static ble_gap_addr_t m_peer_addr[NRF_SDH_BLE_TOTAL_LINK_COUNT];
+
+
+/**@brief convert peer address byte array to string with ':' as deliminator */ 
+static char peer_addr_to_string(const ble_gap_addr_t *peer_addr, char addr_str[])
+{
+    // char addr_str[BLE_GAP_ADDR_LEN*3];
+    char *addr_ptr = &addr_str[0];
+
+    addr_ptr += sprintf(addr_ptr, "%02X", (unsigned char) peer_addr->addr[0]);
+    for (int i = 1; i < BLE_GAP_ADDR_LEN; i++) {
+        addr_ptr += sprintf(addr_ptr, ":%02X", (unsigned char) peer_addr->addr[i]);
+    }
+
+    // return addr_ptr;
+}
+
+
+/**@brief print peer address byte array */
+static void print_peer_addr(const ble_gap_addr_t *p_peer_addr)
+{
+    NRF_LOG_INFO("Connecting to target %02x:%02x:%02x:%02x:%02x:%02x",
+            p_peer_addr->addr[0],
+            p_peer_addr->addr[1],
+            p_peer_addr->addr[2],
+            p_peer_addr->addr[3],
+            p_peer_addr->addr[4],
+            p_peer_addr->addr[5]
+            );
+}
+
+
+/**@brief add peer address to address list */
+static void add_peer_addr(uint8_t conn_handle, const ble_gap_addr_t *p_peer_addr)
+{
+    memcpy(&m_peer_addr[conn_handle].addr, p_peer_addr->addr, sizeof(p_peer_addr->addr));
+    // print_peer_addr(&m_peer_addr[conn_handle]);
+    // print_peer_addr(p_peer_addr);
+    NRF_LOG_INFO("Peer addres added to handle #: 0x%x", conn_handle);
+}
+
+
+/**@brief clear peer address from address list */
+static void clear_peer_addr(uint8_t conn_handle)
+{
+    memset(&m_peer_addr[conn_handle], 0, sizeof(ble_gap_addr_t));
+    NRF_LOG_INFO("Peer addres removed from handle #: 0x%x", conn_handle);
+}
+
+
+/**@brief initialize peer address list */
+static void peer_addr_list_init()
+{
+    for (uint16_t i = 0; i < NRF_SDH_BLE_TOTAL_LINK_COUNT; i++) {
+        clear_peer_addr(i);
+    }
+}
+
+
+/**@brief search list for the peer addres return false if found in list */
+static bool is_new_peer(const ble_gap_addr_t *p_peer_addr)
+{
+    bool is_new = true;
+
+    for (uint16_t i = 0; i < NRF_SDH_BLE_TOTAL_LINK_COUNT; i++) {
+        is_new = memcmp(m_peer_addr[i].addr, p_peer_addr->addr, sizeof(p_peer_addr->addr));
+        if (is_new == 0) {
+            return false;
+        }
+    }
+
+    return is_new;
+}
+
+
 /**@brief Struct that contains pointers to the encoded advertising data. */
 static ble_gap_adv_data_t m_adv_data =
 {
@@ -268,9 +343,30 @@ static void leds_init(void)
 }
 
 
+/**@brief Function for starting scanning. */
+static void scan_start(void)
+{
+    ret_code_t ret;
+
+    NRF_LOG_INFO("Start scanning for device name %s.", (uint32_t)m_target_periph_name);
+    ret = nrf_ble_scan_start(&m_scan);
+    APP_ERROR_CHECK(ret);
+
+    // Turn on the LED to signal scanning.
+    // bsp_board_led_on(CENTRAL_SCANNING_LED);
+    // ret = bsp_indication_set(BSP_INDICATE_SCANNING);
+    
+    ret = app_timer_start(m_scan_timer, APP_TIMER_TICKS(500), NULL);
+    APP_ERROR_CHECK(ret);
+}
+
+
 static void scan_evt_handler(scan_evt_t const * p_scan_evt)
 {
     ret_code_t err_code;
+
+    ble_gap_evt_adv_report_t const * p_adv = p_scan_evt->params.filter_match.p_adv_report;
+    ble_gap_scan_params_t    const * p_scan_param = p_scan_evt->p_scan_params;
 
     switch(p_scan_evt->scan_evt_id)
     {
@@ -280,6 +376,38 @@ static void scan_evt_handler(scan_evt_t const * p_scan_evt)
             APP_ERROR_CHECK(err_code);
         } break;
 
+        case NRF_BLE_SCAN_EVT_FILTER_MATCH:
+        {
+            bool new_peer = is_new_peer(&p_adv->peer_addr);
+            if (!new_peer) {
+                NRF_LOG_INFO("Duplicated connection!");
+                sd_ble_gap_connect_cancel();
+
+                // scan_start();
+            }
+        } break;
+
+        // case NRF_BLE_SCAN_EVT_CONNECTED:
+        // {
+        //     ble_gap_evt_connected_t const *p_connected =
+        //             p_scan_evt->params.connected.p_connected;
+        //     // Scan is automatically stopped by the connection.
+        //     NRF_LOG_INFO("Connecting to target %02x%02x%02x%02x%02x%02x",
+        //                 p_connected->peer_addr.addr[0],
+        //                 p_connected->peer_addr.addr[1],
+        //                 p_connected->peer_addr.addr[2],
+        //                 p_connected->peer_addr.addr[3],
+        //                 p_connected->peer_addr.addr[4],
+        //                 p_connected->peer_addr.addr[5]
+        //                 );
+        // } break;
+
+        case NRF_BLE_SCAN_EVT_SCAN_TIMEOUT:
+        {
+            NRF_LOG_INFO("Scan timed out.");
+            scan_start();
+        } break;
+        
         default:
             break;
     }
@@ -306,24 +434,6 @@ static void scan_init(void)
 
     err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_NAME_FILTER, false);
     APP_ERROR_CHECK(err_code);
-}
-
-
-/**@brief Function for starting scanning. */
-static void scan_start(void)
-{
-    ret_code_t ret;
-
-    NRF_LOG_INFO("Start scanning for device name %s.", (uint32_t)m_target_periph_name);
-    ret = nrf_ble_scan_start(&m_scan);
-    APP_ERROR_CHECK(ret);
-
-    // Turn on the LED to signal scanning.
-    // bsp_board_led_on(CENTRAL_SCANNING_LED);
-    // ret = bsp_indication_set(BSP_INDICATE_SCANNING);
-    
-    ret = app_timer_start(m_scan_timer, APP_TIMER_TICKS(500), NULL);
-    APP_ERROR_CHECK(ret);
 }
 
 
@@ -431,9 +541,16 @@ static void on_ble_central_evt(ble_evt_t const * p_ble_evt)
         // discovery, update LEDs status, and resume scanning, if necessary.
         case BLE_GAP_EVT_CONNECTED:
         {
+            // add the peer address to list
+            ble_gap_addr_t peer_addr = p_gap_evt->params.connected.peer_addr;
+            add_peer_addr(p_gap_evt->conn_handle, &peer_addr);
+            char addr_str[BLE_GAP_ADDR_LEN*3];
+            peer_addr_to_string(&peer_addr, addr_str);
+
             int cnt = ble_conn_state_central_conn_count();
 
-            NRF_LOG_INFO("Central #%d Connected 0x%x, starting DB discovery.", cnt, conn_handle);
+            NRF_LOG_INFO("Central #%d Connected 0x%x Peer %s, starting DB discovery.", 
+                        cnt, conn_handle, nrf_log_push(addr_str));
             
             APP_ERROR_CHECK_BOOL(p_gap_evt->conn_handle < NRF_SDH_BLE_CENTRAL_LINK_COUNT);
 
@@ -481,7 +598,9 @@ static void on_ble_central_evt(ble_evt_t const * p_ble_evt)
         // Upon disconnection, reset the connection handle of the peer that disconnected, update
         // the LEDs status and start scanning again.
         case BLE_GAP_EVT_DISCONNECTED:
-        {
+        {   // clear peer address from list
+            clear_peer_addr(p_gap_evt->conn_handle);
+
             int cnt = ble_conn_state_central_conn_count();
 
             NRF_LOG_INFO("LBS CENTRAL link 0x%x disconnected (reason: 0x%x)",
@@ -582,9 +701,16 @@ static void on_ble_peripheral_evt(ble_evt_t const * p_ble_evt)
         // discovery, update LEDs status, and resume scanning, if necessary.
         case BLE_GAP_EVT_CONNECTED:
         {
+            // add the peer address to list
+            ble_gap_addr_t peer_addr = p_gap_evt->params.connected.peer_addr;
+            add_peer_addr(p_gap_evt->conn_handle, &peer_addr);
+            char addr_str[BLE_GAP_ADDR_LEN*3];
+            peer_addr_to_string(&peer_addr, addr_str);
+
             int cnt = ble_conn_state_peripheral_conn_count();
 
-            NRF_LOG_INFO("Peripheral #%d Connected 0x%x.", cnt, conn_handle);
+            NRF_LOG_INFO("Peripheral #%d Connected 0x%x Peer %s.", 
+                        cnt, conn_handle, nrf_log_push(addr_str));
 
             // Assign connection handle to available instance of QWR module.
             multi_qwr_conn_handle_assign(p_gap_evt->conn_handle);
@@ -622,7 +748,9 @@ static void on_ble_peripheral_evt(ble_evt_t const * p_ble_evt)
         // Upon disconnection, reset the connection handle of the peer that disconnected, update
         // the LEDs status and start scanning again.
         case BLE_GAP_EVT_DISCONNECTED:
-        {
+        {   // clear peer address from list
+            clear_peer_addr(p_gap_evt->conn_handle);
+
             int cnt = ble_conn_state_peripheral_conn_count();
 
             NRF_LOG_INFO("LBS PERIPHERAL link 0x%x disconnected (reason: 0x%x)",
