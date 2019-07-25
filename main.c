@@ -297,14 +297,15 @@ static void advertising_timer_handler(void *p_context)
 static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t led_state)
 {
     if (conn_handle == cent_1_handle) {
-        if (led_state) {
-            bsp_board_led_off(FIRST_CENT_CONNECTED);
-            NRF_LOG_INFO("Received LED ON from link 0x%x!", conn_handle);
-        }
-        else {
-            bsp_board_led_on(FIRST_CENT_CONNECTED);
-            NRF_LOG_INFO("Received LED OFF from link 0x%x!", conn_handle);
-        }
+        // if (led_state) {
+        //     bsp_board_led_off(FIRST_CENT_CONNECTED);
+        //     NRF_LOG_INFO("Received LED ON from link 0x%x!", conn_handle);
+        // }
+        // else {
+        //     bsp_board_led_on(FIRST_CENT_CONNECTED);
+        //     NRF_LOG_INFO("Received LED OFF from link 0x%x!", conn_handle);
+        // }
+
         NRF_LOG_INFO("Relay to Peripheral from link 0x%x!", peri_1_handle);
         ret_code_t err_code = ble_lbs_led_status_send(&m_lbs_c[peri_1_handle], led_state);
         if (err_code != NRF_SUCCESS && 
@@ -315,15 +316,22 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t l
     }
 
     if (conn_handle == cent_2_handle) {
-        if (led_state) {
-            bsp_board_led_off(SECOND_CENT_CONNECTED);
-            NRF_LOG_INFO("Received LED ON from link 0x%x!", conn_handle);
-        }
-        else {
-            bsp_board_led_on(SECOND_CENT_CONNECTED);
-            NRF_LOG_INFO("Received LED OFF from link 0x%x!", conn_handle);
-        }
+        // if (led_state) {
+        //     bsp_board_led_off(SECOND_CENT_CONNECTED);
+        //     NRF_LOG_INFO("Received LED ON from link 0x%x!", conn_handle);
+        // }
+        // else {
+        //     bsp_board_led_on(SECOND_CENT_CONNECTED);
+        //     NRF_LOG_INFO("Received LED OFF from link 0x%x!", conn_handle);
+        // }
 
+        NRF_LOG_INFO("Relay to Peripheral from link 0x%x!", peri_2_handle);
+        ret_code_t err_code = ble_lbs_led_status_send(&m_lbs_c[peri_2_handle], led_state);
+        if (err_code != NRF_SUCCESS && 
+            err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
+            err_code != NRF_ERROR_INVALID_STATE) {
+            NRF_LOG_INFO("LBS write LED state %d", led_state);
+        }
     }
 
 }
