@@ -71,9 +71,9 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-static char const m_target_periph_name[] = "Nordic_Blinky_P";                     /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
+static char const m_target_periph_name[] = "Nordic_Blinky_TMR1";                     /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
 
-#define DEVICE_NAME                     "Nordic_Blinky_R"                       /**< Name of advertising */
+#define DEVICE_NAME                     "Nordic_Blinky_R1"                       /**< Name of advertising */
 #define LINK_TOTAL                      NRF_SDH_BLE_PERIPHERAL_LINK_COUNT + \
                                         NRF_SDH_BLE_CENTRAL_LINK_COUNT
 
@@ -152,7 +152,7 @@ static uint8_t cent_1_handle = 0xff;
 static uint8_t cent_2_handle = 0xff;
 
 
-static ble_gap_addr_t m_peer_addr[NRF_SDH_BLE_TOTAL_LINK_COUNT];
+static ble_gap_addr_t m_peer_addr[NRF_SDH_BLE_TOTAL_LINK_COUNT] = {0};
 
 
 /**@brief convert peer address byte array to string with ':' as deliminator */ 
