@@ -605,6 +605,15 @@ static void on_ble_central_evt(ble_evt_t const * p_ble_evt)
             // Assign connection handle to the QWR module.
             multi_qwr_conn_handle_assign(p_gap_evt->conn_handle);
 
+            NRF_LOG_INFO("Upadate Coded PHY.");
+            ble_gap_phys_t const phys =
+            {
+                .rx_phys = BLE_GAP_PHY_CODED,
+                .tx_phys = BLE_GAP_PHY_CODED,
+            };
+            err_code = sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys);
+            APP_ERROR_CHECK(err_code);
+
             if (cnt == NRF_SDH_BLE_CENTRAL_LINK_COUNT) {
                 if ((peri_1_handle == 0xff) && (peri_2_handle != 0xff)) {
                     peri_1_handle = p_gap_evt->conn_handle;
@@ -681,9 +690,21 @@ static void on_ble_central_evt(ble_evt_t const * p_ble_evt)
             APP_ERROR_CHECK(err_code);
         } break;
 
+        case BLE_GAP_EVT_PHY_UPDATE:
+        {
+            ble_gap_evt_phy_update_t const * p_phy_evt = &p_ble_evt->evt.gap_evt.params.phy_update;
+            if (p_phy_evt->status == BLE_HCI_STATUS_CODE_LMP_ERROR_TRANSACTION_COLLISION)
+            {
+                // Ignore LL collisions.
+                NRF_LOG_DEBUG("LL transaction collision during PHY update.");
+                break;
+            }
+            NRF_LOG_INFO("PHY update 0x%02x.", p_phy_evt->rx_phy);
+        } break;
+        
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
         {
-            NRF_LOG_DEBUG("PHY update request.");
+            NRF_LOG_INFO("PHY update request.");
             ble_gap_phys_t const phys =
             {
                 .rx_phys = BLE_GAP_PHY_AUTO,
