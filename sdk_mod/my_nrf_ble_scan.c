@@ -44,7 +44,7 @@
 #include "sdk_config.h"
 #include <stdlib.h>
 
-#include "nrf_ble_scan.h"
+#include "my_nrf_ble_scan.h"
 
 #include <string.h>
 #include "app_error.h"
@@ -165,7 +165,7 @@ static uint16_t nrf_ble_scan_address_type_decode(uint8_t const * p_addr)
 /**@brief Function for searching for the provided address in the advertisement packets.
  *
  * @details Use this function to parse the received advertising data for the provided address.
- *        
+ *
  *
  * @param[in]   p_adv_report   Advertising data to parse.
  * @param[in]   p_addr         Address to search for. The address length must correspond to @ref BLE_GAP_ADDR_LEN.
@@ -1325,4 +1325,3 @@ void nrf_ble_scan_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_contex)
 
 
 #endif // NRF_BLE_SCAN_ENABLED
-
