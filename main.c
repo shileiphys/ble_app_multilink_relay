@@ -62,7 +62,8 @@
 #include "ble_conn_state.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_pwr_mgmt.h"
-#include "nrf_ble_scan.h"
+
+#include "my_nrf_ble_scan.h"
 
 #include "ble_lbs.h"
 #include "nrf_ble_qwr.h"
