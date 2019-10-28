@@ -72,3 +72,42 @@ Connection 0x2 (3rd connection) > NRF_SDH_BLE_CENTRAL_LINK_COUNT
 <info> app: Relay to Peripheral from link 0x0!
 <info> app: Received LED ON from link 0x3!
 <info> app: Relay to Peripheral from link 0x0!
+
+
+<info> app: Multilink example started.
+<info> app: Start scanning for device name Nordic_Blinky_TMR1.
+<info> app: NRF_BLE_SCAN_EVT_FILTER_MATCH!
+<info> app: Peer addres added to handle #: 0x0
+<info> app: Central #1 Connected 0x0 Peer BD:08:7F:2F:35:C0, starting DB discovery.
+<info> app: Upadate Coded PHY.
+<info> app: Start scanning for device name Nordic_Blinky_TMR1.
+<info> app: PHY update 0x04.
+<info> app: LED Button Service discovered on conn_handle 0x0
+<info> app: Connecting to target BD:08:7F:2F:35:C0
+<info> app: Connecting to target 00:00:00:00:00:00
+<info> app: Connecting to target 00:00:00:00:00:00
+<info> app: Connecting to target 00:00:00:00:00:00
+<info> app: Peer addres removed from handle #: 0x0
+<info> app: LBS CENTRAL link 0x0 disconnected (reason: 0x8)
+
+<info> app: Multilink example started.
+<info> app: Start scanning for device name Nordic_Blinky_TMR1.
+<info> app: NRF_BLE_SCAN_EVT_FILTER_MATCH!
+<info> app: Peer addres added to handle #: 0x0
+<info> app: Central #1 Connected 0x0 Peer BD:08:7F:2F:35:C0, starting DB discovery.
+<info> app: Upadate Coded PHY.
+<info> app: Start scanning for device name Nordic_Blinky_TMR1.
+<info> ble_scan: here I am
+<info> ble_scan: here I am
+<info> ble_scan: here I am
+<info> ble_scan: here I am
+<info> app: PHY update 0x04.
+<info> app: LED Button Service discovered on conn_handle 0x0
+<info> ble_scan: here I am
+<info> ble_scan: here I am
+<info> app: Connecting to target BD:08:7F:2F:35:C0
+<info> app: Connecting to target 00:00:00:00:00:00
+<info> app: Connecting to target 00:00:00:00:00:00
+<info> app: Connecting to target 00:00:00:00:00:00
+<info> app: Peer addres removed from handle #: 0x0
+<info> app: LBS CENTRAL link 0x0 disconnected (reason: 0x8)
