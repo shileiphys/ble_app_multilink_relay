@@ -57,6 +57,9 @@
 NRF_LOG_MODULE_REGISTER();
 
 
+#include "helper.h"
+
+
 /**@brief Function for establishing the connection with a device.
  *
  * @details Connection is established if @ref NRF_BLE_SCAN_EVT_FILTER_MATCH
@@ -865,6 +868,18 @@ static void nrf_ble_scan_on_adv_report(nrf_ble_scan_t           const * const p_
     memset(&scan_evt, 0, sizeof(scan_evt));
 
     scan_evt.p_scan_params = &p_scan_ctx->scan_params;
+
+    // check if the peer address already connected
+    bool match_found = find_conn_addr(&p_adv_report->peer_addr);
+    if (match_found) {
+        scan_evt.scan_evt_id        = NRF_BLE_SCAN_EVT_DUPLICATE_LINK_PACKET_IGNORED;
+        scan_evt.params.p_not_found = p_adv_report;
+        p_scan_ctx->evt_handler(&scan_evt);
+
+        UNUSED_RETURN_VALUE(sd_ble_gap_scan_start(NULL, &p_scan_ctx->scan_buffer));
+        return;
+    }
+
 
     // If the whitelist is used, do not check the filters and return.
     if (is_whitelist_used(p_scan_ctx))

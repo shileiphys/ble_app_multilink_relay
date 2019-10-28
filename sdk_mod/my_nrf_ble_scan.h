@@ -109,7 +109,8 @@ typedef enum
     NRF_BLE_SCAN_EVT_SCAN_TIMEOUT,         /**< Scan timeout. */
     NRF_BLE_SCAN_EVT_SCAN_REQ_REPORT,      /**< Scan request report. */
     NRF_BLE_SCAN_EVT_CONNECTING_ERROR,     /**< Error occurred when establishing the connection. In this event, an error is passed from the function call @ref sd_ble_gap_connect. */
-    NRF_BLE_SCAN_EVT_CONNECTED             /**< Connected to device. */
+    NRF_BLE_SCAN_EVT_CONNECTED,             /**< Connected to device. */
+    NRF_BLE_SCAN_EVT_DUPLICATE_LINK_PACKET_IGNORED   /**< Added event to ingore duplicated connection */
 } nrf_ble_scan_evt_t;
 
 
