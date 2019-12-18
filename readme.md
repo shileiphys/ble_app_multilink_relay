@@ -1,1 +1,1 @@
-This is a modified version of nRF ble_app_hrs_rscs_relay example, which can be used together with devices running ble_app_multiperipheral example. Using helper functions to only allow single connection to the same BLE address
+This is a modified version of nRF ble_app_hrs_rscs_relay example, which can be used together with devices running ble_app_multiperipheral example. Use helper functions to only allow a single connection to the same BLE address

@@ -1,3 +1,8 @@
+/**
+* THIS SOFTWARE IS PROVIDED BY LEI SHI "AS IS"
+* Use helper functions to only allow a signle connection to the same address
+*/
+
 #include "sdk_common.h"
 
 
@@ -19,7 +24,7 @@
 static ble_gap_addr_t m_conn_addr[NRF_SDH_BLE_TOTAL_LINK_COUNT] = {0};
 
 
-/**@brief convert peer address byte array to string with ':' as deliminator */ 
+/**@brief convert peer address byte array to string with ':' as deliminator */
 char peer_addr_to_string(const ble_gap_addr_t *peer_addr, char addr_str[])
 {
     // char addr_str[BLE_GAP_ADDR_LEN*3];

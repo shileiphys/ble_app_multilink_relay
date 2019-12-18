@@ -1,3 +1,8 @@
+/**
+* THIS SOFTWARE IS PROVIDED BY LEI SHI "AS IS"
+* Use helper functions to only allow a signle connection to the same address
+*/
+
 #ifndef HELPER_H__
 #define HELPER_H__
 
@@ -15,7 +20,7 @@ extern "C" {
 #endif
 
 
-/**@brief convert peer address byte array to string with ':' as deliminator */ 
+/**@brief convert peer address byte array to string with ':' as deliminator */
 char peer_addr_to_string(const ble_gap_addr_t *peer_addr, char addr_str[]);
 
 
