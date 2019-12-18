@@ -38,6 +38,10 @@
  *
  */
 
+/**
+* Modified by Lei Shi to avoid reconnecting to the same address again and again
+*/
+
 #include "sdk_common.h"
 #if NRF_MODULE_ENABLED(NRF_BLE_SCAN)
 
